@@ -1,4 +1,5 @@
 # simulate and write data 
+# oder of execution 1
 
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 rm(list = ls())
@@ -18,7 +19,7 @@ if (!("stir" %in% installed.packages()[,"Package"])){
 library(privateEC)  # used to simulate data
 library(stir)
 
-setwd("C:/Users/anush/OneDrive/Research Lab/")
+
 # load other helper packages
 packages <- c("ggplot2", "CORElearn", "reshape2", "dplyr", "pROC", "plotROC")
 check.packages(packages)  # helper function from STIR
@@ -57,6 +58,7 @@ simulate.data <- function(sim.type, n.samples, n.attributes, pct.signals, label,
                          "num.attr", n.attributes, "num.samp", n.samples, sep = "_")
     pec_simFile <- paste(pec_simFile,".csv",sep="")
     #dat <- stack(as.data.frame(result.data))
+    setwd("C:/Users/anush/OneDrive/Research Lab/Project/In Silico Feature Selection/data")
     write.csv(dat, file=pec_simFile, row.names = FALSE)
   }
 }
