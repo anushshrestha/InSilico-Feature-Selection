@@ -45,8 +45,10 @@ simulate.data <- function(sim.type, n.samples, n.attributes, pct.signals, label,
                                 pct.validation = validation,
                                 sim.type = sim.type,
                                 verbose = verbose)
+    # for glm analysis, data <- case.control.data 
     dat <- rbind(sim.data$train, sim.data$holdout)
-    # if (i == 1 ){
+    print(sim.data$signal.names)
+    # if a(i == 1 ){
     #   result.data <- data 
     # }else {
     #   rbind(result.data, dat)
@@ -58,7 +60,10 @@ simulate.data <- function(sim.type, n.samples, n.attributes, pct.signals, label,
                          "num.attr", n.attributes, "num.samp", n.samples, sep = "_")
     pec_simFile <- paste(pec_simFile,".csv",sep="")
     #dat <- stack(as.data.frame(result.data))
-    setwd("C:/Users/anush/OneDrive/Research Lab/Project/In Silico Feature Selection/data")
+    # get path from system, set that path and then update it to the the required path 
+    currentPath <- dirname(rstudioapi::getSourceEditorContext()$path)
+    setwd(currentPath)
+    setwd("../data")
     write.csv(dat, file=pec_simFile, row.names = FALSE)
   }
 }
@@ -71,13 +76,14 @@ simulate.data(sim.type = "mainEffect", n.samples = 100,
                                validation = 1/3,
                                verbose = FALSE, replication = 2)
 
-# simulate.data(sim.type = "interactionErdos", n.samples = 100,
-#               n.attributes = 1000,
-#               pct.signals = 0.1, label ="class", bias = 0.4,
-#               training = 1/2,
-#               holdout = 1/2,
-#               validation = 0,
-#               verbose = FALSE, replication = 1)
+simulate.data(sim.type = "interactionErdos", n.samples = 100,
+              n.attributes = 1000,
+              pct.signals = 0.1, label ="class", bias = 0.4,
+              training = 1/2,
+              holdout = 1/2,
+              validation = 0,
+              verbose = FALSE, replication = 1)
+
 
 
   
