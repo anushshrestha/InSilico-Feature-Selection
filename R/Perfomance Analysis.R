@@ -51,8 +51,11 @@ calculate.perform.metrices <- function(n.samples, n.attributes, threshold){
   for(i in 1:length(file.list)){
     # while reading file row names can be taken from some fixed column 
     t_sorted_relieff <- read.csv(file.list[i], row.names = 1)
+    print(t_sorted_relieff)
     # build confusion matrix
-    positive <- sum(t_sorted_relieff[,3]< threshold)
+    cols <- grep("^.*pval.adj.*$", names(t_sorted_relieff), value = T)
+    pval.col.num <- which(colnames(t_sorted_relieff)==cols[0])
+    positive <- sum(t_sorted_relieff[,pval.col.num]< threshold)
     negative <- n.attributes - positive
 
     true.positive <- grep("^simvar[0-9]",rownames(t_sorted_relieff[1:positive,]), fixed = FALSE, value = TRUE)
