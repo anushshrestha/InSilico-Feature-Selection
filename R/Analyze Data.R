@@ -20,6 +20,7 @@ library(privateEC)  # used to simulate data
 library(stir)
 install_github("insilico/npdr")
 library(npdr)
+library(glmnet)
 
 # load other helper packages
 packages <- c("ggplot2", "CORElearn", "reshape2", "dplyr", "pROC", "plotROC")
@@ -40,28 +41,40 @@ build.write.filename <- function(i,analysis.type, sim.type, bias, pct.signals, n
   pec_simFile <- paste(pec_simFile,".csv",sep="")
 }
 
+analyze.run <- function(data, analysis.type){
+  if(analysis.type == "STIR SURF") {
+    result <- STIR.SURF.analysis(data)
+    }
+  else if(analysis.type == "STIR MULTISURF") {
+    result <- STIR.MULTISURF.analysis(data)
+  }
+  return (result)
+}
+
 # replication is equal to number of replication from simulate data 
 analyze.data <- function(sim.type, n.samples, n.attributes, pct.signals, label, bias, training, holdout, validation, 
-                          verbose, replication){
+                          verbose, replication, analyze.todo){
   for (i in 1:replication){
     sim.type <- sim.type
     # path update
+    read.filename <-build.read.filename(i,sim.type, bias, pct.signals, n.attributes, n.samples)
     currentPath <- dirname(rstudioapi::getSourceEditorContext()$path)
     setwd(currentPath)
     setwd("../data")
     read.filename <-build.read.filename(i,sim.type, bias, pct.signals, n.attributes, n.samples)
     dat <- read.csv(read.filename)
-    t_sorted_surf <- STIR.SURF.analysis(dat)
-    write.filename <- build.write.filename(i,"STIR SURF",sim.type, bias, pct.signals, n.attributes, n.samples)
+    # for a given data, run multiple analysis as given 
+    # after reading, prepare env for writing 
     currentPath <- dirname(rstudioapi::getSourceEditorContext()$path)
     #path update
     setwd(currentPath)
     setwd("../output")
-    write.csv(t_sorted_surf, file = write.filename, row.names = TRUE) 
-    
-    t_sorted_surf <- STIR.MULTISURF.analysis(dat)
-    write.filename <- build.write.filename(i,"STIR MULTISURF",sim.type, bias, pct.signals, n.attributes, n.samples)
-    write.csv(t_sorted_surf, file = write.filename, row.names = TRUE) 
+    for (analyze.type in analyze.todo){
+      t_sorted_surf <- analyze.run(data=dat, analysis.type= analyze.type)
+      analyze.run(data = dat, analysis.type = analyze.type)
+      write.filename <- build.write.filename(i,analyze.type,sim.type, bias, pct.signals, n.attributes, n.samples)
+      write.csv(t_sorted_surf, file = write.filename, row.names = TRUE) 
+    }
   }
 }
 
@@ -143,26 +156,53 @@ STIR.MULTISURF.analysis <- function(dat){
   neighbor.idx.observed<- find.neighbors(predictors.mat, pheno.class, k = 0, method = RF.method)
   results.list <- stir(predictors.mat, neighbor.idx.observed, k = k, metric = metric, method = RF.method)
   t_sorted_multisurf <- results.list$STIR_T[, -3]  # remove cohen-d
-  colnames(t_sorted_multisurf) <- paste(c("t.stat", "t.pval", "t.pval.adj"), "stir", sep=".")
+  colnames(t_sorted_multisurf) <- paste(c("t.stat", "t.pval", "t.pval.adj"), sep=".")
   return(t_sorted_multisurf)
 }
 
 GLMSTIR.SURF.analysis <- function(dat){
+  case.control.data <- dat
+  n.samples.case.control <- dim(case.control.data)[1]
+  pheno.case.control <- as.factor(case.control.data[,"class"])
   
+  npdr.cc.results <- npdr("class", case.control.data, regression.type = "binomial", 
+                          attr.diff.type = "numeric-abs", nbd.methods = "surf", 
+                          nbd.metric = "manhattan", msurf.sd.frac = .5, 
+                          padj.method = "bonferroni", verbose = T)
+  colnames(npdr.cc.results) <- paste(c("pval.adj", "pval.att", "beta.raw.att",
+                                       "beta.Z.att", "beta.0", "pval.0"), "glmstir", 
+                                     sep = ".")
+  return (npdr.cc.results)
 }
 
 GLMSTIR.MULTISURF.analysis <- function(dat){
-  case.control.data <- data
+  case.control.data <- dat
   n.samples.case.control <- dim(case.control.data)[1]
   pheno.case.control <- as.factor(case.control.data[,"class"])
-  functional.case.control <- case.control.
+  
+  npdr.cc.results <- npdr("class", case.control.data, regression.type = "binomial", 
+                          attr.diff.type = "numeric-abs", nbd.methods = "multisurf", 
+                          nbd.metric = "manhattan", msurf.sd.frac = .5, 
+                          padj.method = "bonferroni", verbose = T)
+  colnames(npdr.cc.results) <- paste(c("pval.adj", "pval.att", "beta.raw.att",
+                                       "beta.Z.att", "beta.0", "pval.0"), "glmstir", 
+                                     sep = ".")
+  return (npdr.cc.results)
 }
 
 univariate.analysis <- function(dat){
-  
+  case.control.data <- dat
+  n.samples.case.control <- dim(case.control.data)[1]
+  pheno.case.control <- as.factor(case.control.data[,"class"])
+  univariate.cc.results <- uniReg(outcome="class", dataset=case.control.data, regression.type="binomial")
+  return(univariate.cc.results)
 }
 
 glmnet.analysis <- function(dat){
+  case.control.data <- dat
+  n.samples.case.control <- dim(case.control.data)[1]
+  pheno.case.control <- as.factor(case.control.data[,"class"])
+  
   
 }
 
@@ -175,12 +215,20 @@ analyzed.data <- analyze.data(sim.type = "mainEffect", n.samples = 100,
                               holdout = 1/3,
                               validation = 1/3, 
                               verbose = FALSE,
-                              replication = 2)
+                              replication = 2,
+                              analyze.todo=c("STIR SURF",
+                                             "STIR MULTISURF",
+                                             "GLMSTIR SURF",
+                                             "GLMSTIR MULTISURF",
+                                             "univariate",
+                                             "glmnet"
+                                             )
+                              )
 
-analyzed.data <- analyze.data(sim.type = "interactionErdos", n.samples = 100,
-              n.attributes = 1000,
-              pct.signals = 0.1, label ="class", bias = 0.4,
-              training = 1/2,
-              holdout = 1/2,
-              validation = 0,
-              verbose = FALSE, replication = 1)
+# analyzed.data <- analyze.data(sim.type = "interactionErdos", n.samples = 100,
+#               n.attributes = 1000,
+#               pct.signals = 0.1, label ="class", bias = 0.4,
+#               training = 1/2,
+#               holdout = 1/2,
+#               validation = 0,
+#               verbose = FALSE, replication = 1)
