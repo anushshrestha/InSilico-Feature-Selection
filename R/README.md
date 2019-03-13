@@ -1,3 +1,3 @@
 # InSilico-Feature-Selection
 
-this directory contains R scripts that contains core logic.
+Scripts that simulate and analyze gene co-expression data using machine learning tools for efficient feature selection.
