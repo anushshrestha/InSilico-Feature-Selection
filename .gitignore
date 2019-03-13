@@ -33,3 +33,10 @@ vignettes/*.pdf
 *.knit.md
 .Rproj.user
 
+#Input files
+/data/*
+
+#Output files
+/output/*
+
+*.Rproj
